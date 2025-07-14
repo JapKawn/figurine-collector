@@ -125,3 +125,20 @@ form input[type="text"] {
 .marque-btn.delete-mode {
     background-color: #e74c3c !important;
 }
+.bto {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.bto-danger {
+    background-color: #e63946; /* rouge vif */
+    color: white;
+}
+
+.bto-danger:hover {
+    background-color: #c62828; /* rouge plus foncé au survol */
+}
