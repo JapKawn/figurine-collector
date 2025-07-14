@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Figurine Collector - Marque</title>
+    <link rel="stylesheet" href="css/marque.css" />
+    <script>
+        if (sessionStorage.getItem("auth") !== "ok") {
+            window.location.href = "login.html";
+        }
+    </script>
+</head>
+<body>
+<header>
+    <h1 id="titreMarque">Figurines</h1>
+    <div class="header-controls">
+        <button id="btnAccueil" class="btn" onclick="window.location.href='index.html'">Accueil</button>
+        <input type="search" id="searchFigurines" placeholder="🔍 Rechercher une figurine..." />
+        <button id="toggleForm" class="btn">Ajouter une Figurine</button>
+        <button onclick="logout()" class="btn btn-danger">Déconnexion</button>
+        <script>
+            function logout() {
+                sessionStorage.removeItem("auth");
+                window.location.href = "login.html";
+            }
+        </script>
+    </div>
+</header>
+<section id="figurineFormSection" class="hidden">
+    <form id="figurineForm">
+        <input type="text" id="nom" placeholder="Nom de la figurine" required />
+        <input type="file" id="image" accept=".png, .jpg, .jpeg" required />
+        <button type="submit" class="btn" id="btnAjouterFigurine">Ajouter</button>
+    </form>
+</section>
+<main>
+    <div id="figurinesContainer" class="figurines-container"></div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="js/supabaseClient.js"></script>
+<script src="js/marque.js" type="module" defer></script>
+</body>
+</html>
