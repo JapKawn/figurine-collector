@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+    <script>
+        if (sessionStorage.getItem("auth") !== "ok") {
+            window.location.href = "login.html";
+        }
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Figurine Collector - Marque</title>
@@ -13,6 +18,14 @@
         <button id="btnAccueil" class="btn">Accueil</button>
         <input type="search" id="searchFigurines" placeholder="🔍 Rechercher une marque..." />
         <button id="toggleForm" class="btn">Ajouter une Figurine</button>
+        <button onclick="logout()" class="btn btn-danger">Déconnexion</button>
+
+        <script>
+            function logout() {
+                sessionStorage.removeItem("auth");
+                window.location.href = "login.html";
+            }
+        </script>
     </div>
 </header>
 
