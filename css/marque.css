@@ -267,3 +267,14 @@ header h1 {
         max-width: 100%;
     }
 }
+
+    .btn-danger {
+        background-color: #e63946 !important;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background-color: #c62828 !important;
+    }
+
+
