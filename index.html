@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+    <script>
+        if (sessionStorage.getItem("auth") !== "ok") {
+            window.location.href = "login.html";
+        }
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Figurine Collector</title>
@@ -14,6 +19,14 @@
         <button id="deleteModeBtn" class="btn btn-danger">🗑️ Retirer une Marque</button>
         <input type="text" id="searchInput" placeholder="🔍 Rechercher une marque..." />
         <button id="toggleForm" class="btn">➕ Ajouter une Marque</button>
+        <button onclick="logout()" class="btn btn-danger">Déconnexion</button>
+
+        <script>
+            function logout() {
+                sessionStorage.removeItem("auth");
+                window.location.href = "login.html";
+            }
+        </script>
     </div>
 </header>
 
