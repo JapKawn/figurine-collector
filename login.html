@@ -12,18 +12,7 @@
     <button onclick="checkPassword()">Se connecter</button>
 </div>
 
-<script>
-    function checkPassword() {
-        const pass = document.getElementById("password").value;
-        const correct = "HamburgerSauvage2727";
+<script src="js/login.js" type="module" defer></script>
 
-        if (pass === correct) {
-            sessionStorage.setItem("auth", "ok");
-            window.location.href = "index.html";
-        } else {
-            alert("Mot de passe incorrect.");
-        }
-    }
-</script>
 </body>
 </html>
