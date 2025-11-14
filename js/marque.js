@@ -98,10 +98,8 @@ function renderFigurines(list = allFigurines) {
         card.innerHTML = `
             <img src="${publicUrl}" alt="${fig.nom}" />
             <h3>${fig.nom}</h3>
-            <div class="card-buttons">
-                <button class="btn btn-warning modify-btn">Modifier</button>
-                <button class="btn btn-danger delete-btn">X</button>
-            </div>
+            <button class="btn btn-warning modify-btn">M</button>
+            <button class="btn btn-danger delete-btn">X</button>
         `;
         
         const modifyBtn = card.querySelector(".modify-btn");
@@ -161,4 +159,5 @@ async function fetchMarqueName() {
 await fetchMarqueName();
 await fetchFigurines();
 renderFigurines();
+
 
