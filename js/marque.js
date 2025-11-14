@@ -159,6 +159,7 @@ async function renderFigurines(filter = "") {
             <div class="card-info">
                 <h3>${fig.nom}</h3>
                 <button class="btn btn-danger btn-delete-figurine" data-id="${fig.id}">X</button>
+                <button class="btn btn-edit-figurine" data-id="${fig.id}" data-name="${fig.nom}">M</button>
             </div>
         `;
         container.appendChild(card);
@@ -175,6 +176,28 @@ async function renderFigurines(filter = "") {
             if (error) alert("Erreur suppression : " + error.message);
             renderFigurines(document.getElementById("searchFigurines").value);
         });
+    });
+
+    document.querySelectorAll(".btn-edit-figurine").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+            const id = parseInt(btn.dataset.id);
+            const currentName = btn.dataset.name;
+
+            const newName = prompt("Nouveau Nom : ", currentName);
+            if(!newName || newName.trim() === "") return;
+
+            const { error } = await supabase
+                .from('figurines')
+                .update({nom:newName.trim()})
+                .eq('id',id);
+
+            if (error) {
+                alert("Erreur de modification : " + error.message);
+                return;
+            }
+
+            renderFigurines(document.getElementById("searchFigurines").valuie);
+       });
     });
 }
 
