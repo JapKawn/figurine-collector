@@ -94,21 +94,46 @@ function renderFigurines(list = allFigurines) {
         const card = document.createElement("div");
         card.className = "card";
 
+        // Ajout d'un bouton "Modifier"
         card.innerHTML = `
             <img src="${publicUrl}" alt="${fig.nom}" />
             <h3>${fig.nom}</h3>
-            <button class="btn btn-danger delete-btn">X</button>
+            <div class="card-buttons">
+                <button class="btn btn-warning modify-btn">Modifier</button>
+                <button class="btn btn-danger delete-btn">X</button>
+            </div>
         `;
+        
+        const modifyBtn = card.querySelector(".modify-btn");
+        modifyBtn.addEventListener("click", async () => {
+            const newName = prompt(`Modifier le nom de "${fig.nom}" :`, fig.nom);
+            
+            if (!newName || newName.trim() === "" || newName.trim() === fig.nom) {
+                console.log("Modification annulée.");
+                return; // On arrête tout
+            }
+            
+            const { error } = await supabase
+                .from("figurines")
+                .update({ nom: newName.trim() }) 
+                .eq("id", fig.id); 
 
+            if (error) {
+                alert("Erreur lors de la modification : " + error.message);
+                return;
+            }
+            
+            await fetchFigurines();
+            renderFigurines();
+        });
+        
         const deleteBtn = card.querySelector(".delete-btn");
         deleteBtn.addEventListener("click", async () => {
             const confirmDelete = confirm(`Supprimer la figurine "${fig.nom}" ?`);
             if (!confirmDelete) return;
-
-            // Supprime l'entrée de la BDD
+            
             await supabase.from("figurines").delete().eq("id", fig.id);
-
-            // Supprime l'image du storage (optionnel mais propre)
+            
             await supabase.storage.from("figurines").remove([fig.image_url]);
 
             await fetchFigurines();
@@ -136,3 +161,4 @@ async function fetchMarqueName() {
 await fetchMarqueName();
 await fetchFigurines();
 renderFigurines();
+
