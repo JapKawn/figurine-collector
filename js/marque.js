@@ -1,138 +1,210 @@
 import { supabase } from './supabaseClient.js';
 
-const urlParams = new URLSearchParams(window.location.search);
-const marqueId = urlParams.get("id");
+const params = new URLSearchParams(window.location.search);
+const marqueId = parseInt(params.get("id"));
 
-// DOM Elements
-const titreMarque = document.getElementById("titreMarque");
-const searchInput = document.getElementById("searchFigurines");
-const formSection = document.getElementById("figurineFormSection");
-const toggleForm = document.getElementById("toggleForm");
-const form = document.getElementById("figurineForm");
-const container = document.getElementById("figurinesContainer");
-
-let allFigurines = []; // toutes les figurines de la marque
-
-toggleForm.addEventListener("click", () => {
-    formSection.classList.toggle("hidden");
-    toggleForm.textContent = formSection.classList.contains("hidden")
-        ? "Ajouter une Figurine"
-        : "❌ Fermer le formulaire";
+// Retour à l'accueil
+document.getElementById("btnAccueil").addEventListener("click", () => {
+    window.location.href = "index.php";
 });
 
-// Ajouter une figurine
-form.addEventListener("submit", async (e) => {
+// Toggle formulaire
+document.getElementById("toggleForm").addEventListener("click", () => {
+    const section = document.getElementById("figurineFormSection");
+    section.classList.toggle("hidden");
+
+    const btn = document.getElementById("toggleForm");
+    btn.textContent = section.classList.contains("hidden") ? "Ajouter une figurine" : "Fermer";
+});
+
+// Resize et compression image
+function resizeImage(file, maxWidth, maxHeight, maxSizeKB) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const reader = new FileReader();
+
+        reader.onload = (e) => (img.src = e.target.result);
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+
+            let { width, height } = img;
+
+            if (width > maxWidth) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+            }
+            if (height > maxHeight) {
+                width = Math.round((width * maxHeight) / height);
+                height = maxHeight;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const resizedDataUrl = canvas.toDataURL("image/jpeg", 0.7);
+            const imageSizeKB = resizedDataUrl.length * 3 / 4 / 1024;
+
+            if (imageSizeKB > maxSizeKB) {
+                reject(new Error("L'image est trop lourde après compression."));
+            } else {
+                resolve(resizedDataUrl);
+            }
+        };
+
+        img.onerror = () => reject(new Error("Erreur chargement image"));
+        reader.onerror = () => reject(new Error("Erreur lecture fichier"));
+        reader.readAsDataURL(file);
+    });
+}
+
+// Soumission formulaire
+document.getElementById("figurineForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const nom = document.getElementById("nom").value.trim();
-    const image = document.getElementById("image").files[0];
+    const imageInput = document.getElementById("image");
+    const imageFile = imageInput.files[0];
 
-    if (!nom || !image) return alert("Nom et image requis.");
+    if (!nom || !imageFile) {
+        alert("Merci de remplir tous les champs.");
+        return;
+    }
 
-    const filePath = `figurines/${Date.now()}-${image.name}`;
+    if (!["image/png", "image/jpeg", "image/jpg"].includes(imageFile.type)) {
+        alert("Seuls les fichiers PNG et JPG sont acceptés.");
+        return;
+    }
 
-    const { error: uploadError } = await supabase
-        .storage
-        .from("figurines")
-        .upload(filePath, image);
+    // Redimensionne l'image
+    let resizedDataUrl;
+    try {
+        resizedDataUrl = await resizeImage(imageFile, 400, 400, 200);
+    } catch (err) {
+        alert(err.message);
+        return;
+    }
+
+    // Convertir base64 → blob pour upload
+    const base64 = resizedDataUrl.split(',')[1];
+    const blob = await fetch(resizedDataUrl).then(res => res.blob());
+
+    const fileName = `${Date.now()}-${nom.replace(/\s+/g, "_")}.jpg`;
+
+    // Upload dans Supabase Storage
+    const { error: uploadError } = await supabase.storage
+        .from('figurines')
+        .upload(fileName, blob, {
+            contentType: 'image/jpeg',
+            upsert: true
+        });
 
     if (uploadError) {
-        alert("Erreur upload : " + uploadError.message);
+        alert("Erreur upload image : " + uploadError.message);
         return;
     }
 
-    const { error: insertError } = await supabase
-        .from("figurines")
-        .insert([{ nom, image_url: filePath, marque_id: marqueId }]);
+    // URL publique
+    const { data: publicUrlData } = supabase.storage
+        .from('figurines')
+        .getPublicUrl(fileName);
+    const imageUrl = publicUrlData.publicUrl;
 
-    if (insertError) {
-        alert("Erreur insertion : " + insertError.message);
+    // Enregistre la figurine en BDD
+    const { error } = await supabase.from('figurines').insert([
+        { nom, image_url: imageUrl, marque_id: marqueId }
+    ]);
+
+    if (error) {
+        alert("Erreur ajout figurine : " + error.message);
         return;
     }
 
-    form.reset();
-    formSection.classList.add("hidden");
-    toggleForm.textContent = "Ajouter une Figurine";
-    await fetchFigurines();
+    e.target.reset();
     renderFigurines();
 });
 
-// Recherche
-searchInput.addEventListener("input", () => {
-    const searchText = searchInput.value.toLowerCase();
-    const filtered = allFigurines.filter(f =>
-        f.nom.toLowerCase().includes(searchText)
-    );
-    renderFigurines(filtered);
-});
+// Affiche les figurines d'une marque
+async function renderFigurines(filter = "") {
+    const container = document.getElementById("figurinesContainer");
+    container.innerHTML = "";
 
-// Récupère les figurines liées à la marque
-async function fetchFigurines() {
     const { data, error } = await supabase
-        .from("figurines")
-        .select("*")
-        .eq("marque_id", marqueId);
+        .from('figurines')
+        .select('*')
+        .eq('marque_id', marqueId)
+        .order('id', { ascending: false });
 
     if (error) {
-        console.error("Erreur récupération figurines :", error.message);
+        container.innerHTML = "<p>Erreur lors du chargement.</p>";
         return;
     }
 
-    allFigurines = data;
-}
+    const filtered = data.filter(fig =>
+        fig.nom.toLowerCase().includes(filter.toLowerCase())
+    );
 
-// Affiche les figurines dans la page
-function renderFigurines(list = allFigurines) {
-    container.innerHTML = "";
+    if (filtered.length === 0) {
+        container.innerHTML = "";
+        return;
+    }
 
-    list.forEach(fig => {
-        const { publicUrl } = supabase
-            .storage
-            .from("figurines")
-            .getPublicUrl(fig.image_url).data;
-
+    filtered.forEach((fig) => {
         const card = document.createElement("div");
         card.className = "card";
 
         card.innerHTML = `
-            <img src="${publicUrl}" alt="${fig.nom}" />
-            <h3>${fig.nom}</h3>
-            <button class="btn btn-danger delete-btn">X</button>
+            <img src="${fig.image_url}" alt="${fig.nom}" />
+            <div class="card-info">
+                <h3>${fig.nom}</h3>
+                <button class="btn btn-danger btn-delete-figurine" data-id="${fig.id}">X</button>
+                <button class="btn btn-edit-figurine" data-id="${fig.id}" data-name="${fig.nom}">M</button>
+            </div>
         `;
-
-        const deleteBtn = card.querySelector(".delete-btn");
-        deleteBtn.addEventListener("click", async () => {
-            const confirmDelete = confirm(`Supprimer la figurine "${fig.nom}" ?`);
-            if (!confirmDelete) return;
-
-            // Supprime l'entrée de la BDD
-            await supabase.from("figurines").delete().eq("id", fig.id);
-
-            // Supprime l'image du storage (optionnel mais propre)
-            await supabase.storage.from("figurines").remove([fig.image_url]);
-
-            await fetchFigurines();
-            renderFigurines();
-        });
-
         container.appendChild(card);
+    });
+
+    // Bouton suppression
+    document.querySelectorAll(".btn-delete-figurine").forEach((btn) => {
+        btn.addEventListener("click", async (e) => {
+            const id = parseInt(e.target.dataset.id);
+
+            if (!confirm("Supprimer cette figurine ?")) return;
+
+            const { error } = await supabase.from('figurines').delete().eq('id', id);
+            if (error) alert("Erreur suppression : " + error.message);
+            renderFigurines(document.getElementById("searchFigurines").value);
+        });
+    });
+
+    document.querySelectorAll(".btn-edit-figurine").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+            const id = parseInt(btn.dataset.id);
+            const currentName = btn.dataset.name;
+
+            const newName = prompt("Nouveau Nom : ", currentName);
+            if(!newName || newName.trim() === "") return;
+
+            const { error } = await supabase
+                .from('figurines')
+                .update({nom:newName.trim()})
+                .eq('id',id);
+
+            if (error) {
+                alert("Erreur de modification : " + error.message);
+                return;
+            }
+
+            renderFigurines(document.getElementById("searchFigurines").valuie);
+       });
     });
 }
 
-// Récupère le nom de la marque
-async function fetchMarqueName() {
-    const { data, error } = await supabase
-        .from("marques")
-        .select("nom")
-        .eq("id", marqueId)
-        .single();
+// Recherche en live
+document.getElementById("searchFigurines").addEventListener("input", (e) => {
+    renderFigurines(e.target.value);
+});
 
-    if (!error && data) {
-        titreMarque.textContent = data.nom;
-    }
-}
-
-// Initialisation
-await fetchMarqueName();
-await fetchFigurines();
+// Chargement initial
 renderFigurines();
